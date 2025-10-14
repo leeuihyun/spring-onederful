@@ -20,7 +20,7 @@ jobs:
         uses: gradle/actions/setup-gradle@417ae3ccd767c252f5661f1ace9f835f9654f2b5 # v3.1.0
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      # Spring Boot 어플리케이션 Build
+      # Spring Boot 어플리케이션 Build.
       - name: Build with Gradle Wrapper
         run: ./gradlew build -x test
         env:
@@ -40,19 +40,27 @@ jobs:
       # Docker hub 로 push
       - name: Docker Hub push
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/spring-cicd-test
-#  # 위 과정에서 푸시한 이미지를 ec2에서 풀받아서 실행
-#  run-docker-image-on-ec2:
-#    needs: build-docker-image
-#    runs-on: self-hosted
-#    steps:
-#      - name: docker pull
-#        run : sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/spring-cicd-test
-#      - name: docker stop container
-#        run: |
-#          if [ $(sudo docker ps -a -q -f name=spring-cicd-test) ]; then
-#            sudo docker stop spring-cicd-test
-#          fi
-#      - name: docker run new container
-#        run: sudo docker run --rm -it -d -p 80:8080 --name spring-cicd-test ${{ secrets.DOCKERHUB_USERNAME }}/spring-cicd-test
-#      - name: delete old docker image
-#        run: sudo docker system prune -f
+
+  # EC2에서 컨테이너 실행
+  run-docker-image-on-ec2:
+    needs: build-docker-image
+    runs-on: self-hosted
+    steps:
+      - name: docker pull
+        run: sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/spring-cicd-test:latest
+      - name: docker stop old container
+        run: |
+          if [ $(sudo docker ps -a -q -f name=spring-cicd-test) ]; then
+            sudo docker stop spring-cicd-test
+          fi
+      - name: docker run new container with env
+        run: |
+          sudo docker run --rm -d -p 80:8080 \
+            --name spring-cicd-test \
+            -e DB_URL=${{ secrets.DB_URL }} \
+            -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+            ${{ secrets.DOCKERHUB_USERNAME }}/spring-cicd-test:latest
+      - name: delete old docker images
+        run: sudo docker system prune -f
