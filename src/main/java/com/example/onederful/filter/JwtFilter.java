@@ -38,6 +38,7 @@ public class JwtFilter implements Filter {
             requestURI.startsWith("/swagger-ui") ||
             requestURI.startsWith("/v3/api-docs") ||
             requestURI.startsWith("/swagger-resources") ||
+            requestURI.startsWith("/api/test") ||
             requestURI.startsWith("/webjars")) {
             filterChain.doFilter(servletRequest, servletResponse);
             return;
